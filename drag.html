@@ -1,0 +1,44 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>드래그 연습</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>숫자를 드래그하세요</h1>
+
+<div class="dragbox">
+<div draggable="true" class="item">1</div>
+<div draggable="true" class="item">2</div>
+<div draggable="true" class="item">3</div>
+</div>
+
+<div class="dropbox">여기에 놓기</div>
+
+<a href="index.html">← 메인으로</a>
+
+<script>
+const items=document.querySelectorAll(".item");
+const drop=document.querySelector(".dropbox");
+
+items.forEach(item=>{
+item.addEventListener("dragstart",e=>{
+e.dataTransfer.setData("text",item.textContent);
+});
+});
+
+drop.addEventListener("dragover",e=>{
+e.preventDefault();
+});
+
+drop.addEventListener("drop",e=>{
+const data=e.dataTransfer.getData("text");
+drop.innerHTML="놓은 숫자: "+data;
+});
+</script>
+
+</body>
+</html>

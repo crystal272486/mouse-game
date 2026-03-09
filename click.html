@@ -1,0 +1,47 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>스피드 클릭</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>스피드 클릭 게임</h1>
+<p id="score">점수: 0</p>
+<button onclick="start()">게임 시작</button>
+
+<div id="area">
+<div id="target"></div>
+</div>
+
+<a href="index.html">← 메인으로</a>
+
+<script>
+let score=0;
+const target=document.getElementById("target");
+const area=document.getElementById("area");
+
+function move(){
+const x=Math.random()*(area.clientWidth-60);
+const y=Math.random()*(area.clientHeight-60);
+target.style.left=x+"px";
+target.style.top=y+"px";
+}
+
+target.onclick=function(){
+score++;
+document.getElementById("score").innerText="점수: "+score;
+move();
+}
+
+function start(){
+score=0;
+document.getElementById("score").innerText="점수: 0";
+move();
+}
+</script>
+
+</body>
+</html>
