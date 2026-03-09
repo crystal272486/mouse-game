@@ -2,78 +2,205 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>공 피하기 연습</title>
+    <title>공 피하기 게임</title>
     <style>
-        body { text-align: center; font-family: sans-serif; background: #2c3e50; color: white; overflow: hidden; margin: 0; }
-        #gameArea { width: 600px; height: 400px; background: white; margin: 20px auto; position: relative; cursor: crosshair; overflow: hidden; border-radius: 10px; }
-        .ball { width: 20px; height: 20px; background: red; border-radius: 50%; position: absolute; }
-        .back-btn { padding: 10px 20px; background: #3498db; color: white; text-decoration: none; border-radius: 5px; }
+        body { text-align: center; font-family: 'Malgun Gothic', sans-serif; background: #f0f4f8; margin: 0; padding: 20px; }
+        h1 { color: #2c3e50; margin-bottom: 10px; }
+        
+        /* 점수 및 에너지 표시 영역 */
+        .stats { display: flex; justify-content: center; align-items: center; gap: 30px; margin-bottom: 20px; font-size: 1.2em; font-weight: bold; }
+        .energy-container { display: flex; align-items: center; gap: 10px; }
+        .energy-bar-bg { width: 200px; height: 20px; background: #dcdde1; border-radius: 10px; overflow: hidden; border: 1px solid #bdc3c7; }
+        .energy-bar-fill { width: 100%; height: 100%; background: #2ecc71; transition: width 0.3s, background 0.3s; }
+        
+        /* 게임 화면 영역 */
+        #gameArea { position: relative; width: 600px; height: 400px; background: #ffffff; border: 4px solid #34495e; margin: 0 auto; border-radius: 10px; overflow: hidden; cursor: none; box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
+        
+        /* 플레이어 (우주선 아이콘) */
+        #player { position: absolute; width: 30px; height: 30px; border-radius: 5px; z-index: 10; pointer-events: none; display: flex; justify-content: center; align-items: center; font-size: 24px; }
+        
+        /* 적으로 나오는 빨간 공 */
+        .enemy { position: absolute; width: 20px; height: 20px; background: #e74c3c; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.3); }
+        
+        /* 시작 및 종료 화면 */
+        #startScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; cursor: pointer; }
+        #startScreen h2 { margin: 0 0 15px; font-size: 2em; }
+        
+        .back-btn { display: inline-block; margin-top: 20px; padding: 12px 25px; background: #2c3e50; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: 0.2s; }
+        .back-btn:hover { background: #34495e; }
     </style>
 </head>
 <body>
-    <h1>🎾 공 피하기</h1>
-    <p>흰색 상자 안으로 마우스를 가져가면 시작됩니다. 빨간 공을 피하세요!</p>
-    <div id="time">버틴 시간: 0초</div>
-    <div id="gameArea"></div>
-    <br>
+
+    <h1>🎾 공 피하기 연습</h1>
+    
+    <div class="stats">
+        <div class="energy-container">
+            <span>에너지:</span>
+            <div class="energy-bar-bg">
+                <div id="energyFill" class="energy-bar-fill"></div>
+            </div>
+        </div>
+        <div id="scoreDisplay">점수: 0</div>
+    </div>
+
+    <div id="gameArea">
+        <div id="player">🛸</div>
+        <div id="startScreen" onclick="startGame()">
+            <h2>게임 시작</h2>
+            <p>마우스를 움직여 날아오는 공을 피하세요!</p>
+            <p style="font-size: 0.8em; color: #ccc;">(화면을 클릭하면 시작됩니다)</p>
+        </div>
+    </div>
+
     <a href="index.html" class="back-btn">메인으로 돌아가기</a>
 
     <script>
-        const area = document.getElementById('gameArea');
-        const timeDisplay = document.getElementById('time');
-        let balls = [];
-        let timer = 0;
-        let gameInterval;
-        let isPlaying = false;
+        const gameArea = document.getElementById('gameArea');
+        const player = document.getElementById('player');
+        const startScreen = document.getElementById('startScreen');
+        const energyFill = document.getElementById('energyFill');
+        const scoreDisplay = document.getElementById('scoreDisplay');
 
-        area.addEventListener('mouseenter', startGame);
-        area.addEventListener('mousemove', checkCollision);
+        let isPlaying = false;
+        let score = 0;
+        let energy = 100;
+        let enemies = [];
+        let gameLoop, enemySpawner, scoreTimer;
+        let mouseX = 300, mouseY = 200;
+        let isInvincible = false; // 공에 맞았을 때 잠시 무적 상태
+
+        // 마우스 움직임 감지
+        gameArea.addEventListener('mousemove', (e) => {
+            if (!isPlaying) return;
+            const rect = gameArea.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+            
+            // 우주선이 화면 밖으로 나가지 못하게 고정
+            mouseX = Math.max(15, Math.min(mouseX, 585));
+            mouseY = Math.max(15, Math.min(mouseY, 385));
+            
+            player.style.left = (mouseX - 15) + 'px';
+            player.style.top = (mouseY - 15) + 'px';
+        });
 
         function startGame() {
             if (isPlaying) return;
             isPlaying = true;
-            timer = 0;
-            area.innerHTML = '';
-            balls = [];
+            score = 0;
+            energy = 100;
+            enemies.forEach(en => en.el.remove());
+            enemies = [];
+            isInvincible = false;
             
-            // 공 5개 생성
-            for(let i=0; i<5; i++) {
-                let ball = document.createElement('div');
-                ball.className = 'ball';
-                ball.x = Math.random() * 580; ball.y = Math.random() * 380;
-                ball.dx = (Math.random() - 0.5) * 8; ball.dy = (Math.random() - 0.5) * 8;
-                area.appendChild(ball);
-                balls.push({el: ball, x: ball.x, y: ball.y, dx: ball.dx, dy: ball.dy});
-            }
-
-            gameInterval = setInterval(() => {
-                timer++;
-                timeDisplay.innerText = `버틴 시간: ${(timer/10).toFixed(1)}초`;
-                
-                balls.forEach(b => {
-                    b.x += b.dx; b.y += b.dy;
-                    if(b.x <= 0 || b.x >= 580) b.dx *= -1;
-                    if(b.y <= 0 || b.y >= 380) b.dy *= -1;
-                    b.el.style.left = b.x + 'px';
-                    b.el.style.top = b.y + 'px';
-                });
-            }, 100);
+            updateStats();
+            startScreen.style.display = 'none';
+            player.style.left = '285px';
+            player.style.top = '185px';
+            player.style.opacity = '1';
+            
+            for(let i=0; i<3; i++) spawnEnemy(); // 시작할 때 공 3개 생성
+            
+            gameLoop = setInterval(update, 20); // 화면 움직임 (초당 50번)
+            enemySpawner = setInterval(spawnEnemy, 2000); // 2초마다 공 추가
+            scoreTimer = setInterval(() => { 
+                if(isPlaying) { score += 10; updateStats(); } 
+            }, 1000); // 1초 버틸 때마다 10점 획득
         }
 
-        function checkCollision(e) {
-            if (!isPlaying) return;
-            const rect = area.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
+        function spawnEnemy() {
+            if(!isPlaying || enemies.length >= 25) return; // 공은 최대 25개까지만
+            
+            const el = document.createElement('div');
+            el.className = 'enemy';
+            
+            // 화면 테두리에서 무작위로 등장
+            let x, y;
+            if (Math.random() < 0.5) {
+                x = Math.random() < 0.5 ? 0 : 580;
+                y = Math.random() * 380;
+            } else {
+                x = Math.random() * 580;
+                y = Math.random() < 0.5 ? 0 : 380;
+            }
+            
+            // 공의 이동 방향과 속도 설정 (점수가 오를수록 빨라짐)
+            let angle = Math.atan2(mouseY - y, mouseX - x) + (Math.random() - 0.5);
+            let speed = 2 + (score / 300); // 속도 서서히 증가
+            
+            let dx = Math.cos(angle) * speed;
+            let dy = Math.sin(angle) * speed;
+            
+            gameArea.appendChild(el);
+            enemies.push({ el, x, y, dx, dy });
+        }
 
-            balls.forEach(b => {
-                const dist = Math.hypot(b.x + 10 - mouseX, b.y + 10 - mouseY);
-                if (dist < 15) {
-                    clearInterval(gameInterval);
-                    isPlaying = false;
-                    alert(`게임 오버! 기록: ${(timer/10).toFixed(1)}초`);
+        function update() {
+            if(!isPlaying) return;
+            
+            enemies.forEach(en => {
+                en.x += en.dx;
+                en.y += en.dy;
+                
+                // 화면 벽에 닿으면 튕김
+                if (en.x <= 0 || en.x >= 580) en.dx *= -1;
+                if (en.y <= 0 || en.y >= 380) en.dy *= -1;
+                
+                en.el.style.left = en.x + 'px';
+                en.el.style.top = en.y + 'px';
+                
+                // 충돌 검사 (피타고라스 정리 활용)
+                let distX = (en.x + 10) - mouseX;
+                let distY = (en.y + 10) - mouseY;
+                let distance = Math.sqrt(distX * distX + distY * distY);
+                
+                // 공에 닿았을 때 (반경 15px 이내)
+                if (distance < 15 && !isInvincible) {
+                    takeDamage();
                 }
             });
+        }
+
+        function takeDamage() {
+            energy -= 20; // 한 번 부딪힐 때마다 에너지 20% 감소
+            isInvincible = true;
+            updateStats();
+            
+            // 부딪히면 화면이 빨갛게 번쩍이는 효과
+            gameArea.style.backgroundColor = '#ffcccc';
+            setTimeout(() => { gameArea.style.backgroundColor = '#ffffff'; }, 100);
+            
+            if (energy <= 0) {
+                gameOver();
+            } else {
+                // 부딪힌 직후 1초 동안은 투명해지며 무적 상태
+                player.style.opacity = '0.4';
+                setTimeout(() => {
+                    isInvincible = false;
+                    player.style.opacity = '1';
+                }, 1000);
+            }
+        }
+
+        function updateStats() {
+            scoreDisplay.innerText = "점수: " + score;
+            energyFill.style.width = energy + '%';
+            
+            // 에너지 양에 따라 바 색상 변경
+            if (energy > 50) energyFill.style.background = '#2ecc71'; // 초록
+            else if (energy > 20) energyFill.style.background = '#f1c40f'; // 노랑
+            else energyFill.style.background = '#e74c3c'; // 빨강
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            clearInterval(gameLoop);
+            clearInterval(enemySpawner);
+            clearInterval(scoreTimer);
+            
+            startScreen.innerHTML = `<h2>게임 오버! 💥</h2><p>최종 점수: ${score}점</p><p style="margin-top:20px; font-size:16px;">클릭하여 다시 도전하세요</p>`;
+            startScreen.style.display = 'flex';
         }
     </script>
 </body>
