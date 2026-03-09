@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>공 피하기 연습</title>
+    <style>
+        body { text-align: center; font-family: sans-serif; background: #2c3e50; color: white; overflow: hidden; margin: 0; }
+        #gameArea { width: 600px; height: 400px; background: white; margin: 20px auto; position: relative; cursor: crosshair; overflow: hidden; border-radius: 10px; }
+        .ball { width: 20px; height: 20px; background: red; border-radius: 50%; position: absolute; }
+        .back-btn { padding: 10px 20px; background: #3498db; color: white; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🎾 공 피하기</h1>
+    <p>흰색 상자 안으로 마우스를 가져가면 시작됩니다. 빨간 공을 피하세요!</p>
+    <div id="time">버틴 시간: 0초</div>
+    <div id="gameArea"></div>
+    <br>
+    <a href="index.html" class="back-btn">메인으로 돌아가기</a>
+
+    <script>
+        const area = document.getElementById('gameArea');
+        const timeDisplay = document.getElementById('time');
+        let balls = [];
+        let timer = 0;
+        let gameInterval;
+        let isPlaying = false;
+
+        area.addEventListener('mouseenter', startGame);
+        area.addEventListener('mousemove', checkCollision);
+
+        function startGame() {
+            if (isPlaying) return;
+            isPlaying = true;
+            timer = 0;
+            area.innerHTML = '';
+            balls = [];
+            
+            // 공 5개 생성
+            for(let i=0; i<5; i++) {
+                let ball = document.createElement('div');
+                ball.className = 'ball';
+                ball.x = Math.random() * 580; ball.y = Math.random() * 380;
+                ball.dx = (Math.random() - 0.5) * 8; ball.dy = (Math.random() - 0.5) * 8;
+                area.appendChild(ball);
+                balls.push({el: ball, x: ball.x, y: ball.y, dx: ball.dx, dy: ball.dy});
+            }
+
+            gameInterval = setInterval(() => {
+                timer++;
+                timeDisplay.innerText = `버틴 시간: ${(timer/10).toFixed(1)}초`;
+                
+                balls.forEach(b => {
+                    b.x += b.dx; b.y += b.dy;
+                    if(b.x <= 0 || b.x >= 580) b.dx *= -1;
+                    if(b.y <= 0 || b.y >= 380) b.dy *= -1;
+                    b.el.style.left = b.x + 'px';
+                    b.el.style.top = b.y + 'px';
+                });
+            }, 100);
+        }
+
+        function checkCollision(e) {
+            if (!isPlaying) return;
+            const rect = area.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            balls.forEach(b => {
+                const dist = Math.hypot(b.x + 10 - mouseX, b.y + 10 - mouseY);
+                if (dist < 15) {
+                    clearInterval(gameInterval);
+                    isPlaying = false;
+                    alert(`게임 오버! 기록: ${(timer/10).toFixed(1)}초`);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

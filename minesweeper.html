@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>지뢰찾기</title>
+    <style>
+        body { text-align: center; font-family: sans-serif; background: #bdc3c7; }
+        #board { display: grid; grid-template-columns: repeat(8, 40px); gap: 2px; justify-content: center; margin: 20px auto; width: max-content; background: #7f8c8d; padding: 5px; }
+        .cell { width: 40px; height: 40px; background: #ecf0f1; border: 1px solid #95a5a6; font-weight: bold; font-size: 20px; line-height: 40px; cursor: pointer; user-select: none; }
+        .cell.clicked { background: #bdc3c7; }
+        .back-btn { padding: 10px 20px; background: #2c3e50; color: white; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>💣 지뢰찾기 연습</h1>
+    <p>지뢰(10개)를 피해 모든 빈칸을 클릭하세요!</p>
+    
+    <div id="board"></div>
+    <br>
+    <a href="index.html" class="back-btn">메인으로 돌아가기</a>
+
+    <script>
+        const size = 8;
+        const mineCount = 10;
+        let board = [];
+        const boardEl = document.getElementById('board');
+
+        // 보드 초기화 및 지뢰 심기
+        for(let i=0; i<size*size; i++) {
+            board.push({ mine: false, clicked: false });
+        }
+        let placed = 0;
+        while(placed < mineCount) {
+            let idx = Math.floor(Math.random() * (size*size));
+            if(!board[idx].mine) {
+                board[idx].mine = true;
+                placed++;
+            }
+        }
+
+        // 화면에 그리기
+        board.forEach((cell, i) => {
+            let el = document.createElement('div');
+            el.className = 'cell';
+            el.onclick = () => clickCell(i, el);
+            boardEl.appendChild(el);
+        });
+
+        function clickCell(i, el) {
+            if(board[i].clicked) return;
+            board[i].clicked = true;
+            el.classList.add('clicked');
+
+            if(board[i].mine) {
+                el.innerText = '💣';
+                el.style.backgroundColor = 'red';
+                setTimeout(() => alert('지뢰를 밟았습니다! 게임 오버'), 100);
+            } else {
+                el.innerText = 'O'; // 주변 지뢰 개수 계산은 복잡성을 줄이기 위해 생략
+                el.style.color = 'blue';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>새 날리기 연습</title>
+    <style>
+        body { text-align: center; font-family: sans-serif; background: #87CEEB; }
+        #game { width: 400px; height: 500px; border: 2px solid #333; margin: 20px auto; position: relative; overflow: hidden; background: url('https://www.transparenttextures.com/patterns/cubes.png'); }
+        #bird { width: 30px; height: 30px; background: yellow; border-radius: 50%; position: absolute; top: 200px; left: 50px; }
+        .pipe { width: 50px; background: green; position: absolute; right: -50px; }
+        .back-btn { padding: 10px 20px; background: #2c3e50; color: white; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🐦 새 날리기 연습</h1>
+    <p>게임 화면을 클릭하면 새가 날아오릅니다!</p>
+    <h2 id="score">점수: 0</h2>
+    <div id="game" onclick="jump()">
+        <div id="bird"></div>
+    </div>
+    <a href="index.html" class="back-btn">메인으로 돌아가기</a>
+
+    <script>
+        const bird = document.getElementById('bird');
+        const game = document.getElementById('game');
+        let birdTop = 200;
+        let gravity = 2;
+        let isGameOver = false;
+        let score = 0;
+
+        let fly = setInterval(() => {
+            if (isGameOver) return;
+            birdTop += gravity;
+            bird.style.top = birdTop + 'px';
+            if (birdTop >= 470 || birdTop <= 0) gameOver();
+        }, 20);
+
+        function jump() {
+            if (isGameOver) return;
+            birdTop -= 50;
+        }
+
+        function createPipe() {
+            if (isGameOver) return;
+            let pipe = document.createElement('div');
+            pipe.className = 'pipe';
+            let pipeHeight = Math.random() * 200 + 50;
+            pipe.style.height = pipeHeight + 'px';
+            pipe.style.bottom = '0px';
+            let pipeLeft = 400;
+            game.appendChild(pipe);
+
+            let movePipe = setInterval(() => {
+                if (isGameOver) { clearInterval(movePipe); return; }
+                pipeLeft -= 5;
+                pipe.style.left = pipeLeft + 'px';
+
+                // 충돌 감지 (단순화)
+                if (pipeLeft < 80 && pipeLeft > 20 && birdTop > 500 - pipeHeight) {
+                    gameOver();
+                }
+                if (pipeLeft === 45) {
+                    score++;
+                    document.getElementById('score').innerText = '점수: ' + score;
+                }
+                if (pipeLeft < -50) {
+                    clearInterval(movePipe);
+                    game.removeChild(pipe);
+                }
+            }, 30);
+        }
+
+        setInterval(createPipe, 2000);
+
+        function gameOver() {
+            isGameOver = true;
+            alert("앗, 부딪혔어요! 최종 점수: " + score);
+            location.reload(); // 페이지 새로고침
+        }
+    </script>
+</body>
+</html>
