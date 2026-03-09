@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>숫자 드래그 - forever.or.kr</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; background: #e0f7fa; text-align: center; margin: 0; padding: 20px; color: #333; }
+        
+        .header-bar { margin-bottom: 20px; }
+        .restart-btn { padding: 8px 20px; background: #e74c3c; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 1em; margin-top: 10px; }
+        .restart-btn:hover { background: #c0392b; }
+
+        /* 숫자가 섞여 있는 대기 영역 (여러 줄 허용) */
+        #numberPool { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin: 20px auto; min-height: 80px; max-width: 800px; }
+        
+        /* 숫자를 떨어뜨릴 정답 영역 (여러 줄 허용) */
+        #dropZone { display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start; gap: 15px; margin: 30px auto; padding: 25px; background: white; border: 4px dashed #bdc3c7; border-radius: 15px; width: 80%; max-width: 800px; min-height: 100px; }
+        
+        /* 숫자 블록 디자인 (10개가 잘 들어가도록 크기 살짝 조정) */
+        .num-box { width: 60px; height: 60px; background: #3498db; color: white; font-size: 1.8em; font-weight: bold; line-height: 60px; border-radius: 10px; cursor: grab; box-shadow: 0 4px 6px rgba(0,0,0,0.2); user-select: none; transition: transform 0.1s; }
+        .num-box:active { cursor: grabbing; opacity: 0.6; transform: scale(0.95); }
+
+        .back-btn { display: inline-block; margin-top: 30px; padding: 12px 25px; background: #2c3e50; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        .back-btn:hover { background: #34495e; }
+    </style>
+</head>
+<body>
+
+    <div class="header-bar">
+        <h1>🖱️ 숫자 드래그 앤 드롭</h1>
+        <p>아래 섞여 있는 숫자들을 점선 상자 안으로 <b>1부터 10까지 순서대로</b> 드래그해서 넣으세요!</p>
+        <button class="restart-btn" onclick="initDragGame()">다시 섞기 (재시작)</button>
+    </div>
+
+    <div id="numberPool">
+        </div>
+
+    <div id="dropZone" ondrop="drop(event)" ondragover="allowDrop(event)">
+        </div>
+
+    <a href="index.html" class="back-btn">메인으로 돌아가기</a>
+
+    <script>
+        const MAX_NUMBER = 10; // 원하는 숫자로 변경 가능 (예: 15, 20)
+        let expectedNumber = 1;
+
+        // 게임 시작 시 숫자 섞기
+        function initDragGame() {
+            const pool = document.getElementById('numberPool');
+            const zone = document.getElementById('dropZone');
+            
+            // 기존 블록 초기화
+            pool.innerHTML = '';
+            zone.innerHTML = '';
+            expectedNumber = 1;
+
+            let numbers = [];
+            for (let i = 1; i <= MAX_NUMBER; i++) {
+                numbers.push(i);
+            }
+            // 배열 무작위로 섞기
+            numbers.sort(() => Math.random() - 0.5);
+
+            numbers.forEach(num => {
+                let box = document.createElement('div');
+                box.className = 'num-box';
+                box.id = 'num' + num;
+                box.innerText = num;
+                box.draggable = true;
+                box.ondragstart = drag;
+                pool.appendChild(box);
+            });
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+
+        function drag(ev) {
+            ev.dataTransfer.setData("text", ev.target.id);
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            const data = ev.dataTransfer.getData("text");
+            const draggedElement = document.getElementById(data);
+            
+            // 빈 공간 등 잘못된 곳에서 드롭된 경우 에러 방지
+            if (!draggedElement) return;
+            
+            const draggedNumber = parseInt(draggedElement.innerText);
+
+            // 순서에 맞는 숫자인지 확인
+            if (draggedNumber === expectedNumber) {
+                document.getElementById('dropZone').appendChild(draggedElement);
+                draggedElement.draggable = false;
+                draggedElement.style.cursor = 'default';
+                draggedElement.style.backgroundColor = '#2ecc71'; // 맞추면 초록색으로 변경!
+                
+                expectedNumber++;
+
+                // 10까지 다 넣었으면 성공
+                if (expectedNumber > MAX_NUMBER) {
+                    setTimeout(() => alert(`🎉 완벽합니다! ${MAX_NUMBER}까지 모두 맞추셨어요!`), 200);
+                }
+            } else {
+                // 부드러운 경고창 (alert 대신 시각적 효과)
+                draggedElement.style.backgroundColor = '#e74c3c'; // 틀리면 잠깐 빨간색
+                setTimeout(() => draggedElement.style.backgroundColor = '#3498db', 500);
+            }
+        }
+
+        // 페이지가 열리면 자동으로 시작
+        window.onload = initDragGame;
+    </script>
+</body>
+</html>

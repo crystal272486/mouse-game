@@ -2,33 +2,216 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>클릭 뒤집기</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>클릭 뒤집기 - forever.or.kr</title>
     <style>
-        body { text-align: center; font-family: sans-serif; background: #e9ecef; }
-        .board { display: grid; grid-template-columns: repeat(5, 80px); gap: 10px; justify-content: center; margin-top: 30px; }
-        .card { width: 80px; height: 80px; background-color: #3498db; border-radius: 10px; cursor: pointer; transition: 0.3s; }
-        .card.flipped { background-color: #e74c3c; transform: rotateY(180deg); }
-        .back-btn { display: inline-block; margin-top: 30px; padding: 10px 20px; background: #2c3e50; color: white; text-decoration: none; border-radius: 5px; }
+        body { font-family: 'Malgun Gothic', sans-serif; background: #e0f2f1; text-align: center; margin: 0; padding: 20px; color: #333; user-select: none; }
+        h1 { color: #00695c; margin-bottom: 5px; }
+        p { color: #00897b; margin-bottom: 20px; font-weight: bold; }
+
+        /* 점수판 (별점, 이동 횟수, 리셋 버튼) */
+        .score-panel { display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 20px; background: white; padding: 15px 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: inline-flex; font-size: 1.2em; }
+        .stars { color: #f1c40f; font-size: 1.5em; letter-spacing: 2px; }
+        .moves { font-weight: bold; color: #2c3e50; }
+        .restart-btn { background: #00897b; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 0.9em; }
+        .restart-btn:hover { background: #00695c; }
+
+        /* 카드 보드 (4x4 고정) */
+        #gameBoard { display: grid; grid-template-columns: repeat(4, 90px); gap: 15px; justify-content: center; margin: 0 auto; perspective: 1000px; }
+
+        /* 개별 카드 디자인 */
+        .card { width: 90px; height: 110px; cursor: pointer; position: relative; }
+        .card-inner { width: 100%; height: 100%; transition: transform 0.4s; transform-style: preserve-3d; position: relative; }
+        
+        /* 클릭해서 뒤집혔을 때 */
+        .card.flipped .card-inner { transform: rotateY(180deg); }
+        
+        /* 짝을 맞췄을 때 부드럽게 사라지는 효과 */
+        .card.matched .card-inner { opacity: 0.6; transform: rotateY(180deg) scale(0.95); }
+        .card.matched .card-face { background: #b2dfdb; border: 2px solid #00897b; }
+
+        .card-cover, .card-face { width: 100%; height: 100%; position: absolute; backface-visibility: hidden; display: flex; justify-content: center; align-items: center; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); box-sizing: border-box; }
+        
+        /* 카드 뒷면 (클릭 전) */
+        .card-cover { background: #009688; color: white; font-size: 2.5em; font-weight: bold; transition: 0.2s; }
+        .card-cover:hover { background: #00796b; transform: translateY(-3px); }
+        
+        /* 카드 앞면 (그림) */
+        .card-face { background: white; transform: rotateY(180deg); font-size: 3em; }
+
+        .back-btn { display: inline-block; margin-top: 40px; padding: 12px 25px; background: #37474f; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: 0.2s; }
+        .back-btn:hover { background: #263238; }
+
+        /* 승리 축하 모달창 */
+        #winModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { background: white; padding: 40px; border-radius: 15px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .modal-content h2 { color: #00897b; margin-top: 0; font-size: 2em; }
+        .modal-content p { font-size: 1.2em; color: #333; }
+        .close-btn { margin-top: 20px; padding: 10px 25px; background: #e74c3c; color: white; border: none; border-radius: 5px; font-size: 1.1em; cursor: pointer; font-weight: bold; }
+        .close-btn:hover { background: #c0392b; }
     </style>
 </head>
 <body>
-    <h1>🔄 클릭 뒤집기 연습</h1>
-    <p>파란색 카드를 클릭해서 빨간색으로 모두 뒤집어보세요!</p>
-    
-    <div class="board" id="board"></div>
 
+    <h1>🔄 클릭 뒤집기 (기억력 게임)</h1>
+    <p>카드를 한 번씩 클릭해 같은 그림 2장을 연속으로 찾아보세요!</p>
+
+    <div class="score-panel">
+        <div class="stars" id="stars">⭐⭐⭐</div>
+        <div class="moves">뒤집기: <span id="movesCount">0</span>번</div>
+        <button class="restart-btn" onclick="initGame()">다시 연습 ⟳</button>
+    </div>
+
+    <div id="gameBoard">
+        </div>
+
+    <div id="winModal">
+        <div class="modal-content">
+            <h2>🎉 축하합니다! 🎉</h2>
+            <p>모든 짝을 다 맞추셨습니다!</p>
+            <p>총 뒤집은 횟수: <b id="finalMoves">0</b>번</p>
+            <p>최종 평점: <span id="finalStars" class="stars">⭐⭐⭐</span></p>
+            <button class="close-btn" onclick="closeModal()">다시 하기</button>
+        </div>
+    </div>
+
+    <br>
     <a href="index.html" class="back-btn">메인으로 돌아가기</a>
 
     <script>
-        const board = document.getElementById('board');
-        for(let i=0; i<20; i++) {
-            let card = document.createElement('div');
-            card.className = 'card';
-            card.onclick = function() {
-                this.classList.toggle('flipped');
-            };
-            board.appendChild(card);
+        // 8쌍의 동물 이모티콘 사용
+        const emojis = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'];
+        const board = document.getElementById('gameBoard');
+        
+        let hasFlippedCard = false;
+        let lockBoard = false;
+        let firstCard, secondCard;
+        
+        let moves = 0;
+        let matchedPairs = 0;
+
+        function initGame() {
+            board.innerHTML = '';
+            hasFlippedCard = false;
+            lockBoard = false;
+            firstCard = null;
+            secondCard = null;
+            moves = 0;
+            matchedPairs = 0;
+            
+            document.getElementById('movesCount').innerText = moves;
+            document.getElementById('stars').innerText = '⭐⭐⭐';
+
+            // 8쌍(16장) 배열 만들기
+            let deck = [...emojis, ...emojis];
+            
+            // 카드 섞기 (Fisher-Yates 알고리즘으로 골고루 섞임)
+            deck.sort(() => Math.random() - 0.5);
+
+            // 화면에 카드 배치
+            deck.forEach(emoji => {
+                let card = document.createElement('div');
+                card.className = 'card';
+                card.dataset.emoji = emoji;
+                
+                // 이번에는 '더블클릭'이 아닌 '한 번 클릭(onclick)'으로 작동!
+                card.onclick = function() { flipCard(this); };
+
+                card.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-cover">?</div>
+                        <div class="card-face">${emoji}</div>
+                    </div>
+                `;
+                board.appendChild(card);
+            });
         }
+
+        function flipCard(card) {
+            if (lockBoard) return;
+            if (card === firstCard) return; // 같은 카드를 두 번 연속 누르는 것 방지
+            if (card.classList.contains('matched')) return; // 이미 맞춰진 카드는 무시
+
+            card.classList.add('flipped');
+
+            if (!hasFlippedCard) {
+                // 첫 번째 클릭
+                hasFlippedCard = true;
+                firstCard = card;
+                return;
+            }
+
+            // 두 번째 클릭
+            secondCard = card;
+            addMove(); // 두 장을 뒤집었으므로 횟수 증가
+            checkForMatch();
+        }
+
+        function checkForMatch() {
+            let isMatch = firstCard.dataset.emoji === secondCard.dataset.emoji;
+
+            if (isMatch) {
+                disableCards();
+            } else {
+                unflipCards();
+            }
+        }
+
+        function disableCards() {
+            firstCard.classList.add('matched');
+            secondCard.classList.add('matched');
+            matchedPairs++;
+
+            resetBoard();
+
+            // 8쌍(16장)을 모두 맞췄을 때
+            if (matchedPairs === 8) {
+                setTimeout(showWinModal, 500);
+            }
+        }
+
+        function unflipCards() {
+            lockBoard = true;
+            
+            // 틀렸을 경우 1초 동안 보여준 뒤 다시 뒤집음
+            setTimeout(() => {
+                firstCard.classList.remove('flipped');
+                secondCard.classList.remove('flipped');
+                resetBoard();
+            }, 1000);
+        }
+
+        function resetBoard() {
+            [hasFlippedCard, lockBoard] = [false, false];
+            [firstCard, secondCard] = [null, null];
+        }
+
+        function addMove() {
+            moves++;
+            document.getElementById('movesCount').innerText = moves;
+            
+            // 횟수에 따라 별점(평점) 깎기
+            let starDisplay = document.getElementById('stars');
+            if (moves === 12) {
+                starDisplay.innerText = '⭐⭐'; // 12번 넘어가면 별 2개
+            } else if (moves === 18) {
+                starDisplay.innerText = '⭐';   // 18번 넘어가면 별 1개
+            }
+        }
+
+        function showWinModal() {
+            document.getElementById('finalMoves').innerText = moves;
+            document.getElementById('finalStars').innerText = document.getElementById('stars').innerText;
+            document.getElementById('winModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('winModal').style.display = 'none';
+            initGame(); // 닫으면서 새 게임 시작
+        }
+
+        // 페이지 열 때 자동 시작
+        window.onload = initGame;
     </script>
 </body>
 </html>

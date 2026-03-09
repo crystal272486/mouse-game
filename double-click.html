@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>더블클릭 뒤집기 - forever.or.kr</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; background: #f4f7f6; text-align: center; margin: 0; padding: 20px; color: #333; user-select: none; }
+        h1 { color: #2c3e50; margin-bottom: 5px; }
+        p { color: #7f8c8d; margin-bottom: 20px; }
+
+        /* 난이도 선택 영역 */
+        .controls { margin-bottom: 30px; font-size: 1.1em; font-weight: bold; background: white; display: inline-block; padding: 15px 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .controls label { margin: 0 10px; cursor: pointer; color: #34495e; }
+        .controls input[type="radio"] { transform: scale(1.2); margin-right: 5px; cursor: pointer; }
+
+        /* 카드 보드 (난이도에 따라 열 개수가 바뀜) */
+        #gameBoard { display: grid; justify-content: center; gap: 15px; margin: 0 auto; max-width: 800px; perspective: 1000px; }
+
+        /* 카드 디자인 및 3D 뒤집기 효과 */
+        .card { width: 80px; height: 100px; cursor: pointer; position: relative; }
+        .card-inner { width: 100%; height: 100%; transition: transform 0.4s; transform-style: preserve-3d; position: relative; }
+        
+        /* 더블클릭해서 뒤집혔을 때의 상태 */
+        .card.flipped .card-inner { transform: rotateY(180deg); }
+        
+        /* 짝을 맞췄을 때 반짝이는 효과 */
+        .card.matched .card-face { background: #f1c40f; box-shadow: 0 0 15px #f1c40f; border: 2px solid white; }
+
+        .card-cover, .card-face { width: 100%; height: 100%; position: absolute; backface-visibility: hidden; display: flex; justify-content: center; align-items: center; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); box-sizing: border-box; }
+        
+        /* 카드 뒷면 (처음 보이는 파란색 면) */
+        .card-cover { background: #3498db; color: white; font-size: 2em; font-weight: bold; }
+        .card-cover:hover { background: #2980b9; transform: translateY(-3px); transition: 0.2s; }
+        
+        /* 카드 앞면 (그림이 있는 흰색 면) */
+        .card-face { background: white; transform: rotateY(180deg); font-size: 2.5em; }
+
+        .back-btn { display: inline-block; margin-top: 40px; padding: 12px 25px; background: #2c3e50; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: 0.2s; }
+        .back-btn:hover { background: #34495e; }
+    </style>
+</head>
+<body>
+
+    <h1>✌️ 더블클릭 뒤집기</h1>
+    <p>카드를 <b>빠르게 두 번(따닥!)</b> 눌러서 같은 그림의 짝을 찾아보세요!</p>
+
+    <div class="controls">
+        <span>난이도: </span>
+        <label><input type="radio" name="level" value="4" onchange="initGame()" checked> 초급</label>
+        <label><input type="radio" name="level" value="6" onchange="initGame()"> 중급</label>
+        <label><input type="radio" name="level" value="8" onchange="initGame()"> 고급</label>
+        <label><input type="radio" name="level" value="10" onchange="initGame()"> 최상급</label>
+    </div>
+
+    <div id="gameBoard">
+        </div>
+
+    <br>
+    <a href="index.html" class="back-btn">메인으로 돌아가기</a>
+
+    <script>
+        // 사용할 이모티콘 (그림) 목록
+        const emojis = ['🍎', '🍌', '🍇', '🍉', '🍓', '🍒', '🍑', '🍍', '🥝', '🥭'];
+        
+        const board = document.getElementById('gameBoard');
+        let firstCard = null;
+        let secondCard = null;
+        let lockBoard = false;
+        let matchedCount = 0;
+        let totalPairs = 0;
+
+        function initGame() {
+            // 선택된 난이도(쌍의 개수) 가져오기
+            const levelRadios = document.getElementsByName('level');
+            for(let radio of levelRadios) {
+                if(radio.checked) totalPairs = parseInt(radio.value);
+            }
+
+            // 보드 초기화
+            board.innerHTML = '';
+            matchedCount = 0;
+            resetBoardVars();
+
+            // 그리드 열 개수 조절 (최상급 20장이면 5열, 나머지는 4열)
+            board.style.gridTemplateColumns = totalPairs === 10 ? 'repeat(5, 80px)' : 'repeat(4, 80px)';
+
+            // 필요한 개수만큼 이모티콘 짝 맞추기
+            let gameEmojis = [];
+            for (let i = 0; i < totalPairs; i++) {
+                gameEmojis.push(emojis[i], emojis[i]);
+            }
+
+            // 카드 무작위로 섞기
+            gameEmojis.sort(() => Math.random() - 0.5);
+
+            // 화면에 카드 뿌리기
+            gameEmojis.forEach(emoji => {
+                let card = document.createElement('div');
+                card.className = 'card';
+                card.dataset.emoji = emoji; // 카드가 가진 그림 정보 저장
+                
+                // 핵심! 'ondblclick'을 사용하여 더블클릭할 때만 뒤집히게 설정
+                card.ondblclick = function() { flipCard(this); };
+                
+                // 한 번만 클릭했을 때는 경고용 흔들림 효과 (더블클릭 유도)
+                card.onclick = function() {
+                    if(!this.classList.contains('flipped') && !lockBoard) {
+                        this.style.transform = 'translateX(3px)';
+                        setTimeout(() => this.style.transform = 'translateX(-3px)', 100);
+                        setTimeout(() => this.style.transform = 'translateX(0)', 200);
+                    }
+                };
+
+                card.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-cover">?</div>
+                        <div class="card-face">${emoji}</div>
+                    </div>
+                `;
+                board.appendChild(card);
+            });
+        }
+
+        function flipCard(card) {
+            // 보드가 잠겨있거나, 이미 뒤집힌 카드거나, 첫 번째 카드와 같은 카드를 다시 누르면 무시
+            if (lockBoard) return;
+            if (card === firstCard) return;
+            if (card.classList.contains('flipped')) return;
+
+            card.classList.add('flipped');
+
+            // 첫 번째 카드를 뒤집은 경우
+            if (!firstCard) {
+                firstCard = card;
+                return;
+            }
+
+            // 두 번째 카드를 뒤집은 경우 짝이 맞는지 확인
+            secondCard = card;
+            checkForMatch();
+        }
+
+        function checkForMatch() {
+            // 두 카드의 그림이 같은지 비교
+            let isMatch = firstCard.dataset.emoji === secondCard.dataset.emoji;
+
+            if (isMatch) {
+                disableCards(); // 짝이 맞으면 고정
+            } else {
+                unflipCards(); // 틀리면 다시 뒤집기
+            }
+        }
+
+        function disableCards() {
+            firstCard.classList.add('matched');
+            secondCard.classList.add('matched');
+            matchedCount++;
+
+            // 모든 짝을 다 맞췄을 때
+            if (matchedCount === totalPairs) {
+                setTimeout(() => alert("🎉 대단해요! 모든 짝을 완벽하게 맞추셨습니다!"), 500);
+            }
+            resetBoardVars();
+        }
+
+        function unflipCards() {
+            lockBoard = true; // 카드가 다시 뒤집히는 동안 다른 카드를 못 누르게 잠금
+            
+            setTimeout(() => {
+                firstCard.classList.remove('flipped');
+                secondCard.classList.remove('flipped');
+                resetBoardVars();
+            }, 800); // 0.8초 보여주고 다시 뒤집음
+        }
+
+        function resetBoardVars() {
+            firstCard = null;
+            secondCard = null;
+            lockBoard = false;
+        }
+
+        // 페이지 열리자마자 초급 모드로 시작
+        window.onload = initGame;
+    </script>
+</body>
+</html>

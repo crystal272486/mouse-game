@@ -2,55 +2,170 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>색 맞추기 연습</title>
+    <title>색 맞추기 연습 - forever.or.kr</title>
     <style>
-        body { text-align: center; font-family: sans-serif; background: #fdfbfb; }
-        #board { display: grid; gap: 5px; justify-content: center; margin-top: 20px; }
-        .box { border-radius: 5px; cursor: pointer; }
-        .back-btn { display: inline-block; margin-top: 30px; padding: 10px 20px; background: #2c3e50; color: white; text-decoration: none; border-radius: 5px; }
+        body { font-family: 'Malgun Gothic', sans-serif; background: #fdfbfb; text-align: center; margin: 0; padding: 20px; color: #333; user-select: none; }
+        h1 { color: #2c3e50; margin-bottom: 5px; }
+        p { color: #7f8c8d; margin-bottom: 20px; font-weight: bold; }
+        
+        /* 상단 점수 및 목표 표시줄 */
+        .header-info { display: flex; justify-content: center; align-items: center; gap: 40px; margin-bottom: 20px; font-size: 1.3em; font-weight: bold; }
+        #targetBox { padding: 10px 25px; border-radius: 10px; color: white; background: #333; transition: background-color 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        #scoreBox { color: #2980b9; background: #e1f5fe; padding: 10px 25px; border-radius: 10px; }
+
+        /* 게임 화면 영역 */
+        #gameArea { position: relative; width: 600px; height: 400px; background: #ecf0f1; border: 4px solid #bdc3c7; margin: 0 auto; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1); cursor: crosshair; }
+        
+        /* 통통 튀어다니는 컬러볼 디자인 */
+        .ball { position: absolute; width: 45px; height: 45px; border-radius: 50%; box-shadow: inset -5px -5px 10px rgba(0,0,0,0.2), 0 4px 6px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.1s; }
+        .ball:active { transform: scale(0.8); } /* 누를 때 쏙 들어가는 효과 */
+
+        .back-btn { display: inline-block; margin-top: 30px; padding: 12px 25px; background: #2c3e50; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: 0.2s; }
+        .back-btn:hover { background: #34495e; }
     </style>
 </head>
 <body>
-    <h1>🎨 색 맞추기 연습</h1>
-    <p>혼자만 색이 살짝 다른 네모를 빠르게 찾아 클릭하세요!</p>
-    <h2 id="level">단계: 1</h2>
-    
-    <div id="board"></div>
+
+    <h1>🎨 컬러볼 색 맞추기</h1>
+    <p>화면 안에서 제시된 <b id="targetName">색깔</b>의 공을 모두 찾아 클릭하세요!</p>
+
+    <div class="header-info">
+        <div id="targetBox">목표: 대기중</div>
+        <div id="scoreBox">점수: <span id="score">0</span>점</div>
+    </div>
+
+    <div id="gameArea"></div>
 
     <a href="index.html" class="back-btn">메인으로 돌아가기</a>
 
     <script>
-        let level = 1;
-        function makeBoard() {
-            const board = document.getElementById('board');
-            board.innerHTML = '';
-            document.getElementById('level').innerText = '단계: ' + level;
+        const gameArea = document.getElementById('gameArea');
+        const targetBox = document.getElementById('targetBox');
+        const targetName = document.getElementById('targetName');
+        const scoreDisplay = document.getElementById('score');
+
+        // 사용할 색상 세트
+        const colorSet = [
+            { name: '🔴 빨간색 공', hex: '#e74c3c' },
+            { name: '🔵 파란색 공', hex: '#3498db' },
+            { name: '🟢 초록색 공', hex: '#2ecc71' },
+            { name: '🟡 노란색 공', hex: '#f1c40f' },
+            { name: '🟣 보라색 공', hex: '#9b59b6' }
+        ];
+
+        let balls = [];
+        let currentTarget = null;
+        let score = 0;
+
+        function startGame() {
+            score = 0;
+            scoreDisplay.innerText = score;
+            spawnWave();
+            animate();
+        }
+
+        // 새로운 공들을 화면에 뿌리는 함수
+        function spawnWave() {
+            gameArea.innerHTML = '';
+            balls = [];
             
-            let size = Math.min(Math.floor((level + 5) / 2), 8); // 칸 수 서서히 증가
-            board.style.gridTemplateColumns = `repeat(${size}, 50px)`;
-            board.style.gridTemplateRows = `repeat(${size}, 50px)`;
+            // 총 15개의 공을 무작위 색상으로 생성
+            for(let i = 0; i < 15; i++) {
+                let c = colorSet[Math.floor(Math.random() * colorSet.length)];
+                let el = document.createElement('div');
+                el.className = 'ball';
+                el.style.backgroundColor = c.hex;
+                
+                // 공이 처음 생길 무작위 위치
+                let size = 45;
+                let x = Math.random() * (600 - size);
+                let y = Math.random() * (400 - size);
+                
+                // 공이 굴러가는 방향과 속도
+                let dx = (Math.random() - 0.5) * 3;
+                let dy = (Math.random() - 0.5) * 3;
 
-            let r = Math.floor(Math.random() * 200);
-            let g = Math.floor(Math.random() * 200);
-            let b = Math.floor(Math.random() * 200);
-            let diff = Math.max(50 - level * 2, 5); // 갈수록 색 차이가 줄어듦
+                el.style.left = x + 'px';
+                el.style.top = y + 'px';
 
-            let answerIdx = Math.floor(Math.random() * (size * size));
+                // 공을 마우스로 눌렀을 때의 동작
+                el.onmousedown = () => hitBall(el, c);
 
-            for(let i=0; i<size*size; i++) {
-                let box = document.createElement('div');
-                box.className = 'box';
-                if(i === answerIdx) {
-                    box.style.backgroundColor = `rgb(${r+diff}, ${g+diff}, ${b+diff})`;
-                    box.onclick = function() { level++; makeBoard(); };
-                } else {
-                    box.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
-                    box.onclick = function() { alert('틀렸습니다! 다시 시작합니다.'); level = 1; makeBoard(); };
+                gameArea.appendChild(el);
+                balls.push({ el, x, y, dx, dy, colorObj: c, active: true });
+            }
+
+            setNewTarget();
+        }
+
+        // 찾아야 할 다음 색상 지정하기
+        function setNewTarget() {
+            // 화면에 남아있는 공들 중에서 하나를 랜덤하게 목표로 지정
+            let activeBalls = balls.filter(b => b.active);
+            if (activeBalls.length === 0) {
+                // 화면의 공을 다 치웠으면 새로운 공들 다시 생성
+                spawnWave();
+                return;
+            }
+
+            let randomBall = activeBalls[Math.floor(Math.random() * activeBalls.length)];
+            currentTarget = randomBall.colorObj;
+            
+            // 목표 상자 UI 업데이트
+            targetBox.innerText = `목표: 찾으세요! ${currentTarget.name}`;
+            targetBox.style.backgroundColor = currentTarget.hex;
+            targetName.innerText = currentTarget.name;
+            targetName.style.color = currentTarget.hex;
+        }
+
+        // 공을 클릭했을 때 정답/오답 판별
+        function hitBall(el, colorObj) {
+            if (colorObj === currentTarget) {
+                // 정답! 목표 색상과 같을 때
+                score += 10;
+                scoreDisplay.innerText = score;
+                el.style.display = 'none'; // 터진 공은 화면에서 숨김
+                
+                let hitObj = balls.find(b => b.el === el);
+                if(hitObj) hitObj.active = false;
+
+                // 같은 색상의 공이 더 남아있는지 확인
+                let remainingTargetBalls = balls.filter(b => b.active && b.colorObj === currentTarget);
+                if (remainingTargetBalls.length === 0) {
+                    setNewTarget(); // 다 찾았으면 새로운 색상 제시
                 }
-                board.appendChild(box);
+            } else {
+                // 오답! 엉뚱한 색상을 눌렀을 때
+                score = Math.max(0, score - 5); // 5점 감점
+                scoreDisplay.innerText = score;
+                
+                // 틀렸다는 표시로 배경이 살짝 붉게 깜빡임
+                gameArea.style.backgroundColor = '#ffcccc';
+                setTimeout(() => gameArea.style.backgroundColor = '#ecf0f1', 150);
             }
         }
-        makeBoard();
+
+        // 공들이 통통 튕겨다니게 만드는 애니메이션 로직
+        function animate() {
+            balls.forEach(b => {
+                if (!b.active) return;
+                
+                b.x += b.dx;
+                b.y += b.dy;
+
+                // 화면 벽에 닿으면 반대 방향으로 튕기기 (공 크기 45px 기준)
+                if (b.x <= 0 || b.x >= 555) b.dx *= -1;
+                if (b.y <= 0 || b.y >= 355) b.dy *= -1;
+
+                b.el.style.left = b.x + 'px';
+                b.el.style.top = b.y + 'px';
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        // 창이 열리면 바로 게임 시작
+        window.onload = startGame;
     </script>
 </body>
 </html>
