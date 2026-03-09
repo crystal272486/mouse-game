@@ -1,20 +1,45 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>마우스 연습 게임</title>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>forever.or.kr - 마우스 및 게임 연습</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
+        header { background-color: #2c3e50; color: white; width: 100%; padding: 30px 0; text-align: center; }
+        h1 { margin: 0; font-size: 2.5em; }
+        p { margin-top: 10px; color: #ecf0f1; }
+        
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; width: 90%; max-width: 900px; padding: 40px 0; }
+        
+        .menu-btn { 
+            background-color: white; border: 2px solid #bdc3c7; border-radius: 12px; padding: 25px 10px; 
+            text-align: center; text-decoration: none; color: #34495e; font-weight: bold; font-size: 1.2em; 
+            transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .menu-btn:hover { background-color: #3498db; color: white; border-color: #2980b9; transform: translateY(-5px); }
+        .icon { font-size: 2em; margin-bottom: 10px; }
+    </style>
 </head>
 <body>
-<h1>마우스 연습 게임</h1>
 
-<div class="grid">
-<a class="card" href="click.html">🎯 스피드 클릭</a>
-<a class="card" href="drag.html">🧩 드래그 연습</a>
-<a class="card" href="memory.html">🧠 카드 뒤집기</a>
-</div>
+    <header>
+        <h1>forever.or.kr</h1>
+        <p>마우스 조작 연습 및 두뇌 게임 포털</p>
+    </header>
 
-<p class="footer">GitHub Pages에 올리면 바로 웹사이트가 됩니다.</p>
+    <div class="grid-container">
+        <a href="speed-click.html" class="menu-btn"><span class="icon">🚀</span>스피드 클릭</a>
+        <a href="drag-number.html" class="menu-btn"><span class="icon">🖱️</span>숫자 드래그</a>
+        <a href="click-flip.html" class="menu-btn"><span class="icon">🔄</span>클릭 뒤집기</a>
+        <a href="double-click.html" class="menu-btn"><span class="icon">✌️</span>더블클릭 연습</a>
+        <a href="dodge-ball.html" class="menu-btn"><span class="icon">🎾</span>공 피하기</a>
+        <a href="3455-click.html" class="menu-btn"><span class="icon">🖐️</span>삼사오오 클릭</a>
+        <a href="hanoi-tower.html" class="menu-btn"><span class="icon">🏰</span>하노이탑 연습</a>
+        <a href="bird-flying.html" class="menu-btn"><span class="icon">🐦</span>새 날리기 연습</a>
+        <a href="color-match.html" class="menu-btn"><span class="icon">🎨</span>색 맞추기 연습</a>
+        <a href="minesweeper.html" class="menu-btn"><span class="icon">💣</span>지뢰찾기</a>
+    </div>
+
 </body>
 </html>
