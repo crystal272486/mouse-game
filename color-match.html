@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>색 맞추기 연습</title>
+    <style>
+        body { text-align: center; font-family: sans-serif; background: #fdfbfb; }
+        #board { display: grid; gap: 5px; justify-content: center; margin-top: 20px; }
+        .box { border-radius: 5px; cursor: pointer; }
+        .back-btn { display: inline-block; margin-top: 30px; padding: 10px 20px; background: #2c3e50; color: white; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🎨 색 맞추기 연습</h1>
+    <p>혼자만 색이 살짝 다른 네모를 빠르게 찾아 클릭하세요!</p>
+    <h2 id="level">단계: 1</h2>
+    
+    <div id="board"></div>
+
+    <a href="index.html" class="back-btn">메인으로 돌아가기</a>
+
+    <script>
+        let level = 1;
+        function makeBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            document.getElementById('level').innerText = '단계: ' + level;
+            
+            let size = Math.min(Math.floor((level + 5) / 2), 8); // 칸 수 서서히 증가
+            board.style.gridTemplateColumns = `repeat(${size}, 50px)`;
+            board.style.gridTemplateRows = `repeat(${size}, 50px)`;
+
+            let r = Math.floor(Math.random() * 200);
+            let g = Math.floor(Math.random() * 200);
+            let b = Math.floor(Math.random() * 200);
+            let diff = Math.max(50 - level * 2, 5); // 갈수록 색 차이가 줄어듦
+
+            let answerIdx = Math.floor(Math.random() * (size * size));
+
+            for(let i=0; i<size*size; i++) {
+                let box = document.createElement('div');
+                box.className = 'box';
+                if(i === answerIdx) {
+                    box.style.backgroundColor = `rgb(${r+diff}, ${g+diff}, ${b+diff})`;
+                    box.onclick = function() { level++; makeBoard(); };
+                } else {
+                    box.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+                    box.onclick = function() { alert('틀렸습니다! 다시 시작합니다.'); level = 1; makeBoard(); };
+                }
+                board.appendChild(box);
+            }
+        }
+        makeBoard();
+    </script>
+</body>
+</html>

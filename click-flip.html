@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>클릭 뒤집기</title>
+    <style>
+        body { text-align: center; font-family: sans-serif; background: #e9ecef; }
+        .board { display: grid; grid-template-columns: repeat(5, 80px); gap: 10px; justify-content: center; margin-top: 30px; }
+        .card { width: 80px; height: 80px; background-color: #3498db; border-radius: 10px; cursor: pointer; transition: 0.3s; }
+        .card.flipped { background-color: #e74c3c; transform: rotateY(180deg); }
+        .back-btn { display: inline-block; margin-top: 30px; padding: 10px 20px; background: #2c3e50; color: white; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔄 클릭 뒤집기 연습</h1>
+    <p>파란색 카드를 클릭해서 빨간색으로 모두 뒤집어보세요!</p>
+    
+    <div class="board" id="board"></div>
+
+    <a href="index.html" class="back-btn">메인으로 돌아가기</a>
+
+    <script>
+        const board = document.getElementById('board');
+        for(let i=0; i<20; i++) {
+            let card = document.createElement('div');
+            card.className = 'card';
+            card.onclick = function() {
+                this.classList.toggle('flipped');
+            };
+            board.appendChild(card);
+        }
+    </script>
+</body>
+</html>
