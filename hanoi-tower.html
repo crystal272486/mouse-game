@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>하노이 탑 - forever.or.kr</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; background: #e9ecef; text-align: center; margin: 0; padding: 0; }
+        header { background: #2c3e50; color: white; padding: 25px 0; margin-bottom: 20px; }
+        h1 { margin: 0; font-size: 2em; }
+        
+        .desc { background: white; max-width: 600px; margin: 0 auto 20px; padding: 15px; border-radius: 8px; color: #555; font-size: 0.95em; line-height: 1.6; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
+        .controls { margin-bottom: 20px; font-weight: bold; font-size: 1.1em; color: #333; }
+        select, button { padding: 8px 15px; font-size: 1em; border-radius: 5px; border: 1px solid #ccc; margin: 0 5px; }
+        button { background: #3498db; color: white; border: none; cursor: pointer; transition: 0.2s; font-weight: bold; }
+        button:hover { background: #2980b9; }
+
+        /* 게임 보드와 기둥 디자인 */
+        .game-board { display: flex; justify-content: center; gap: 15px; margin-top: 40px; }
+        .tower-wrapper { position: relative; width: 160px; height: 260px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; cursor: pointer; }
+        
+        .peg { position: absolute; bottom: 20px; width: 14px; height: 210px; background: #a6b0b3; border-radius: 7px 7px 0 0; z-index: 0; }
+        .base { width: 100%; height: 20px; background: #34495e; border-radius: 10px; z-index: 1; }
+        
+        /* 원반들이 쌓이는 공간 */
+        .disks-container { position: absolute; bottom: 20px; width: 100%; display: flex; flex-direction: column-reverse; align-items: center; z-index: 2; pointer-events: none; }
+        
+        /* 개별 원반 디자인 */
+        .disk { height: 28px; border-radius: 14px; margin-bottom: 2px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: transform 0.2s; pointer-events: auto; }
+        
+        /* 클릭으로 선택되었을 때 위로 살짝 뜨는 효과 */
+        .disk.selected { transform: translateY(-25px); box-shadow: 0 10px 15px rgba(0,0,0,0.3); border: 2px solid #fff; }
+        
+        .back-btn { display: inline-block; margin-top: 40px; padding: 12px 25px; background: #7f8c8d; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; }
+    </style>
+</head>
+<body onload="initGame()">
+
+    <header>
+        <h1>🏰 하노이 탑 연습</h1>
+    </header>
+
+    <div class="desc">
+        <b>[게임 방법]</b> 첫 번째 기둥에 있는 원반들을 세 번째 기둥으로 모두 옮기세요.<br>
+        1. 한 번에 맨 위의 원반 하나씩만 옮길 수 있습니다.<br>
+        2. 작은 원반 위에 큰 원반을 올릴 수 없습니다.<br>
+        <i>* 마우스로 드래그하거나, 기둥을 클릭해서 옮겨보세요!</i>
+    </div>
+
+    <div class="controls">
+        <label>난이도(원반 개수): </label>
+        <select id="diskSelect" onchange="initGame()">
+            <option value="3">3개 (초급)</option>
+            <option value="4" selected>4개 (중급)</option>
+            <option value="5">5개 (고급)</option>
+            <option value="6">6개 (도전!)</option>
+        </select>
+        <button onclick="initGame()">다시 시작</button>
+        <span style="margin-left:20px;">이동 횟수: <span id="moves" style="color:#e74c3c; font-size:1.3em;">0</span></span>
+    </div>
+
+    <div class="game-board">
+        <div class="tower-wrapper" onclick="clickTower(event)" ondrop="drop(event)" ondragover="allowDrop(event)">
+            <div class="peg"></div><div class="base"></div>
+            <div class="disks-container" id="dc1"></div>
+        </div>
+        <div class="tower-wrapper" onclick="clickTower(event)" ondrop="drop(event)" ondragover="allowDrop(event)">
+            <div class="peg"></div><div class="base"></div>
+            <div class="disks-container" id="dc2"></div>
+        </div>
+        <div class="tower-wrapper" onclick="clickTower(event)" ondrop="drop(event)" ondragover="allowDrop(event)">
+            <div class="peg"></div><div class="base"></div>
+            <div class="disks-container" id="dc3"></div>
+        </div>
+    </div>
+
+    <a href="index.html" class="back-btn">메인으로 돌아가기</a>
+
+    <script>
+        let moves = 0;
+        let diskCount = 4;
+        let draggedDisk = null;
+        let selectedDisk = null;
+        let isDragging = false;
+        const colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6'];
+
+        // 게임 초기화
+        function initGame() {
+            moves = 0;
+            document.getElementById('moves').innerText = moves;
+            diskCount = parseInt(document.getElementById('diskSelect').value);
+            selectedDisk = null;
+
+            ['dc1', 'dc2', 'dc3'].forEach(id => document.getElementById(id).innerHTML = '');
+
+            // 첫 번째 기둥에 원반 생성 (큰 것부터 밑에 깔림)
+            for (let i = diskCount; i >= 1; i--) {
+                let disk = document.createElement('div');
+                disk.className = 'disk';
+                disk.id = 'disk' + i;
+                disk.dataset.size = i;
+                disk.style.width = (40 + i * 18) + 'px'; // 크기 비율 조절
+                disk.style.backgroundColor = colors[(i-1) % colors.length];
+                
+                // 드래그 이벤트 연결
+                disk.addEventListener('dragstart', dragStart);
+                disk.addEventListener('dragend', dragEnd);
+                
+                document.getElementById('dc1').appendChild(disk);
+            }
+            updateDraggable();
+        }
+
+        // 맨 위에 있는 원반만 조작 가능하도록 설정
+        function updateDraggable() {
+            document.querySelectorAll('.disk').forEach(d => {
+                d.draggable = false;
+                d.style.cursor = 'not-allowed';
+            });
+            ['dc1', 'dc2', 'dc3'].forEach(id => {
+                const container = document.getElementById(id);
+                if (container.lastElementChild) {
+                    container.lastElementChild.draggable = true;
+                    container.lastElementChild.style.cursor = 'grab';
+                }
+            });
+        }
+
+        /* --- 드래그 앤 드롭 기능 --- */
+        function dragStart(e) {
+            isDragging = true;
+            if(selectedDisk) { selectedDisk.classList.remove('selected'); selectedDisk = null; }
+            draggedDisk = e.target;
+            setTimeout(() => e.target.style.opacity = '0.5', 0);
+        }
+
+        function dragEnd(e) {
+            e.target.style.opacity = '1';
+            draggedDisk = null;
+            setTimeout(() => isDragging = false, 100);
+        }
+
+        function allowDrop(e) { e.preventDefault(); }
+
+        function drop(e) {
+            e.preventDefault();
+            const wrapper = e.target.closest('.tower-wrapper');
+            if (!wrapper || !draggedDisk) return;
+            moveDisk(draggedDisk, wrapper.querySelector('.disks-container'));
+        }
+
+        /* --- 클릭 기능 (스마트폰/태블릿 지원) --- */
+        function clickTower(e) {
+            if (isDragging) return;
+            const wrapper = e.currentTarget;
+            const container = wrapper.querySelector('.disks-container');
+
+            if (selectedDisk) {
+                // 이미 선택된 원반이 있다면 현재 클릭한 기둥으로 이동 시도
+                moveDisk(selectedDisk, container);
+                selectedDisk.classList.remove('selected');
+                selectedDisk = null;
+                updateDraggable();
+            } else {
+                // 선택된 원반이 없다면 이 기둥의 맨 위 원반을 선택
+                if (container.lastElementChild) {
+                    selectedDisk = container.lastElementChild;
+                    selectedDisk.classList.add('selected');
+                }
+            }
+        }
+
+        /* --- 원반 이동 및 승리 확인 로직 --- */
+        function moveDisk(disk, targetContainer) {
+            const topDisk = targetContainer.lastElementChild;
+            const diskSize = parseInt(disk.dataset.size);
+
+            // 타겟 기둥이 비어있거나, 타겟 기둥의 맨 위 원반보다 크기가 작을 때만 이동 가능
+            if (!topDisk || parseInt(topDisk.dataset.size) > diskSize) {
+                if (disk.parentElement !== targetContainer) {
+                    targetContainer.appendChild(disk);
+                    moves++;
+                    document.getElementById('moves').innerText = moves;
+                    updateDraggable();
+                    checkWin(targetContainer.id);
+                }
+            }
+        }
+
+        function checkWin(containerId) {
+            if (containerId === 'dc3') {
+                const container = document.getElementById('dc3');
+                if (container.children.length === diskCount) {
+                    setTimeout(() => {
+                        alert(`🎉 대성공! 총 ${moves}번 만에 하노이 탑을 옮겼습니다!`);
+                    }, 200);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
