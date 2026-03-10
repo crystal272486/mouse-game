@@ -21,16 +21,19 @@
 
     <script>
         const size = 8;
-        const mineCount = 10;
+        const totalMines = 10;
         let board = [];
+        let gameOver = false; // 게임 진행 상태
+        let safeCellsClicked = 0; // 클릭한 안전한 칸의 수
         const boardEl = document.getElementById('board');
+        const cells = []; // 화면의 칸(DOM)들을 저장할 배열
 
-        // 보드 초기화 및 지뢰 심기
+        // 1. 보드 초기화 및 지뢰 심기
         for(let i=0; i<size*size; i++) {
             board.push({ mine: false, clicked: false });
         }
         let placed = 0;
-        while(placed < mineCount) {
+        while(placed < totalMines) {
             let idx = Math.floor(Math.random() * (size*size));
             if(!board[idx].mine) {
                 board[idx].mine = true;
@@ -38,26 +41,79 @@
             }
         }
 
-        // 화면에 그리기
-        board.forEach((cell, i) => {
+        // 2. 주변 지뢰 개수 계산 함수 추가
+        function countMines(index) {
+            let count = 0;
+            let row = Math.floor(index / size);
+            let col = index % size;
+
+            // 클릭한 칸 주변 8방향(위, 아래, 양옆, 대각선) 검사
+            for(let r = -1; r <= 1; r++) {
+                for(let c = -1; c <= 1; c++) {
+                    let nr = row + r;
+                    let nc = col + c;
+                    
+                    // 보드 범위를 벗어나지 않는지 확인
+                    if(nr >= 0 && nr < size && nc >= 0 && nc < size) {
+                        let nIdx = nr * size + nc;
+                        if(board[nIdx].mine) count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        // 3. 화면에 그리기
+        board.forEach((cellData, i) => {
             let el = document.createElement('div');
             el.className = 'cell';
             el.onclick = () => clickCell(i, el);
+            cells.push(el); // 나중에 전체 지뢰를 보여주기 위해 배열에 저장
             boardEl.appendChild(el);
         });
 
+        // 4. 셀 클릭 시 동작 로직 완성
         function clickCell(i, el) {
-            if(board[i].clicked) return;
+            // 이미 클릭했거나 게임이 오버된 상태면 무시
+            if(board[i].clicked || gameOver) return;
+            
             board[i].clicked = true;
             el.classList.add('clicked');
 
             if(board[i].mine) {
-                el.innerText = '💣';
+                // 지뢰를 밟았을 때
+                gameOver = true;
                 el.style.backgroundColor = 'red';
+                
+                // 숨겨져 있던 모든 지뢰 보여주기
+                board.forEach((cell, idx) => {
+                    if (cell.mine) {
+                        cells[idx].innerText = '💣';
+                        cells[idx].classList.add('clicked');
+                    }
+                });
+
                 setTimeout(() => alert('지뢰를 밟았습니다! 게임 오버'), 100);
             } else {
-                el.innerText = 'O'; // 주변 지뢰 개수 계산은 복잡성을 줄이기 위해 생략
-                el.style.color = 'blue';
+                // 지뢰가 아닐 때: 안전한 칸 클릭 횟수 증가 및 숫자 표시
+                safeCellsClicked++;
+                let mineCount = countMines(i);
+                
+                if (mineCount > 0) {
+                    el.innerText = mineCount;
+                    // 가독성을 위해 숫자에 따라 색상 지정
+                    if(mineCount === 1) el.style.color = 'blue';
+                    else if(mineCount === 2) el.style.color = 'green';
+                    else el.style.color = 'red';
+                } else {
+                    el.innerText = ''; // 주변에 지뢰가 0개면 빈칸 유지
+                }
+
+                // 승리 조건 체크 (전체 칸 수 - 지뢰 수 = 안전한 칸 수)
+                if (safeCellsClicked === (size * size) - totalMines) {
+                    gameOver = true;
+                    setTimeout(() => alert('축하합니다! 모든 지뢰를 찾았습니다!'), 100);
+                }
             }
         }
     </script>
